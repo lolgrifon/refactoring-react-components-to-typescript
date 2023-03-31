@@ -14,7 +14,14 @@ const initialContext = {
 	initialized: false,
 };
 
+interface BoardConfig {
+	rows: number;
+	columns: number;
+	mines: number;
+}
+
 type GameState = "idle" | "active" | "won" | "lost";
+
 interface BoardContext{
 	gameState: GameState;
 	cells: Cell[];
@@ -23,10 +30,11 @@ interface BoardContext{
 }
 
 type BoardEvent = 
-{type: "RESET", board: BoardConfig} | 
-{type: "REVEAL_CELL", board: BoardConfig, index: number} | 
-{type: "MARK_CELL", board: BoardConfig, index: number} | 
-{type: "MARK_REMAINIING_MINES", board: BoardConfig}
+ {type: "RESET", board: BoardConfig} |
+ {type: "REVEAL_CELL", board: BoardConfig, index: number}  |
+ {type: "REVEAL_ADJACENT_CELLS", board: BoardConfig, index: number}  |
+ {type: "MARK_CELL", board: BoardConfig, index: number}  |
+ {type: "MARK_REMAINING_MINES", board: BoardConfig};
 
 function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 	if (event.type === "RESET") {
@@ -151,7 +159,7 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 								cells,
 								mines,
 								board,
-								gameState
+								gameState,
 							);
 						}
 						return {
@@ -216,11 +224,7 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 	return context;
 }
 
-interface BoardConfig {
- 	rows: number;
- 	columns: number;
-	mines: number;
-}
+
 
 const Board = ({ board = presets.Beginner }) => {
 	let [{ gameState, cells, mines }, send] = React.useReducer(
