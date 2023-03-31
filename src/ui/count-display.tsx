@@ -10,10 +10,10 @@ interface CountDisplayProps {
 }
 
 const CountDisplay: React.FunctionComponent<CountDisplayProps> =
-	function CountDisplay({ count, className }: CountDisplayProps) {
-		let countDisplay = String(Math.max(Math.min(count, 999), -99));
+	({ count, className }: CountDisplayProps) => {
+		let actualCount = String(Math.max(Math.min(count, 999), -99));
 		return (
-			<div className={cx(scope("count-display"), className)}>{countDisplay}</div>
+			<div className={cx(scope("count-display"), className)}>{actualCount}</div>
 		);
 	};
 
