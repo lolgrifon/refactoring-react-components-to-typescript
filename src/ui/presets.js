@@ -23,4 +23,10 @@ export const presets = {
 		columns: 30,
 		mines: 99,
 	},
+	Extreme: {
+		name: "Extreme",
+		rows: 50,
+		columns: 30,
+		mines: 120,
+	},
 };
