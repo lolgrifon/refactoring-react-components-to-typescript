@@ -9,7 +9,7 @@ interface CountDisplayProps {
 	className?: string;
 }
 
-const CountDisplay: React.FunctionComponent<CountDisplayProps> =
+const CountDisplay: React.FC<CountDisplayProps> =
 	({ count, className }: CountDisplayProps) => {
 		let actualCount = String(Math.max(Math.min(count, 999), -99));
 		return (
