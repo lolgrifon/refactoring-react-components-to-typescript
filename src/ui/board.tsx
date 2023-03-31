@@ -7,7 +7,7 @@ import { scope } from "../lib/utils";
 import { WindowsWindow, WindowsBox, WindowsWindowHeader } from "./windows-ui";
 import { CountDisplay } from "./count-display";
 
-const initialContext: BoardContext = {
+const initialState: BoardState = {
 	gameState: "idle",
 	cells: [],
 	mines: [],
@@ -16,7 +16,7 @@ const initialContext: BoardContext = {
 
 type GameState = "idle" | "active" | "won" | "lost";
 
-interface BoardContext {
+interface BoardState {
 	gameState: GameState;
 	cells: Cell[];
 	mines: number[];
@@ -24,30 +24,30 @@ interface BoardContext {
 }
 
 type BoardEvent =
-	| { type: "RESET"; board: BoardConfig }
-	| { type: "REVEAL_CELL"; board: BoardConfig; index: number }
-	| { type: "REVEAL_ADJACENT_CELLS"; board: BoardConfig; index: number }
+	| { type: "RESET"; board: Board }
+	| { type: "REVEAL_CELL"; board: Board; index: number }
+	| { type: "REVEAL_ADJACENT_CELLS"; board: Board; index: number }
 	| { type: "MARK_CELL"; index: number }
-	| { type: "MARK_REMAINING_MINES"; board: BoardConfig };
+	| { type: "MARK_REMAINING_MINES"; board: Board };
 
-function reducer(context: BoardContext, event: BoardEvent): BoardContext {
+function reducer(state: BoardState, event: BoardEvent): BoardState {
 	if (event.type === "RESET") {
 		return {
-			...context,
+			...state,
 			gameState: "idle",
 			cells: resetCells(event.board),
 			initialized: false,
 		};
 	}
 
-	switch (context.gameState) {
+	switch (state.gameState) {
 		case "idle": {
 			switch (event.type) {
 				case "REVEAL_CELL": {
 					let mines = initMines({
 						totalMines: event.board.mines,
 						initialCellIndex: event.index,
-						maxMines: getMaxMines(context.cells),
+						maxMines: getMaxMines(state.cells),
 					});
 
 					let [gameState, cells] = selectCell(
@@ -55,11 +55,11 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 						initCells(event.board, mines),
 						mines,
 						event.board,
-						context.gameState
+						state.gameState
 					);
 
 					return {
-						...context,
+						...state,
 						gameState,
 						cells,
 						mines,
@@ -67,7 +67,7 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 					};
 				}
 				case "MARK_CELL": {
-					let cells = [...context.cells];
+					let cells = [...state.cells];
 					let cell = cells[event.index];
 
 					if (!cell) {
@@ -79,7 +79,7 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 					cells[event.index] = toggleCellFlags(cell);
 
 					return {
-						...context,
+						...state,
 						gameState: "active",
 						cells,
 					};
@@ -89,9 +89,9 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 		case "active": {
 			switch (event.type) {
 				case "REVEAL_CELL": {
-					let mines = context.mines;
-					let currentCells = context.cells;
-					let currentState = context.gameState;
+					let mines = state.mines;
+					let currentCells = state.cells;
+					let currentState = state.gameState;
 
 					// The user can begin the game befopre initializing the board. For
 					// example, they may start by first flagging a cell, which will start
@@ -99,11 +99,11 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 					// sense as a strategic move, but in that case we'll check to see that
 					// we actually have a board and mines initialized before revealing the
 					// cell (because all cells are still empty at this point)
-					if (!context.initialized) {
+					if (!state.initialized) {
 						mines = initMines({
 							totalMines: event.board.mines,
 							initialCellIndex: event.index,
-							maxMines: getMaxMines(context.cells),
+							maxMines: getMaxMines(state.cells),
 						});
 						currentCells = addMinesToCells(currentCells, event.board, mines);
 					}
@@ -116,7 +116,7 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 						currentState
 					);
 					return {
-						...context,
+						...state,
 						gameState,
 						cells,
 						mines,
@@ -124,17 +124,17 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 					};
 				}
 				case "REVEAL_ADJACENT_CELLS": {
-					let cells = [...context.cells];
+					let cells = [...state.cells];
 					let cell = cells[event.index];
 					if (cell.adjacentMineCount <= 0) {
-						return context;
+						return state;
 					}
 
 					let markCount = 0;
 					let cellsToReveal: number[] = [];
 					let board = event.board;
-					let mines = context.mines;
-					let gameState: GameState = context.gameState;
+					let mines = state.mines;
+					let gameState: GameState = state.gameState;
 
 					for (let idx of cell.adjacentIndexMatrix) {
 						if (idx == null) continue;
@@ -159,15 +159,15 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 							gameState = nextState;
 						}
 						return {
-							...context,
+							...state,
 							gameState,
 							cells: cells,
 						};
 					}
-					return context;
+					return state;
 				}
 				case "MARK_CELL": {
-					let cells = [...context.cells];
+					let cells = [...state.cells];
 					let cell = cells[event.index];
 
 					if (!cell) {
@@ -179,7 +179,7 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 					cells[event.index] = toggleCellFlags(cell);
 
 					return {
-						...context,
+						...state,
 						cells,
 					};
 				}
@@ -188,7 +188,7 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 		case "won": {
 			switch (event.type) {
 				case "MARK_REMAINING_MINES": {
-					let cellsToMark = context.cells.reduce((cells, cell, index) => {
+					let cellsToMark = state.cells.reduce((cells, cell, index) => {
 						if (cell.status === "hidden" || cell.status === "question") {
 							return [...cells, index];
 						}
@@ -196,10 +196,10 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 					}, []);
 
 					if (cellsToMark.length < 1) {
-						return context;
+						return state;
 					}
 
-					let cells = [...context.cells];
+					let cells = [...state.cells];
 					for (let index of cellsToMark) {
 						let cell = cells[index];
 						if (!cell) {
@@ -210,17 +210,17 @@ function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 						cells[index] = flagCell(cell);
 					}
 					return {
-						...context,
+						...state,
 						cells,
 					};
 				}
 			}
 		}
 	}
-	return context;
+	return state;
 }
 
-interface BoardConfig {
+interface Board {
 	rows: number;
 	columns: number;
 	mines: number;
@@ -229,13 +229,8 @@ interface BoardConfig {
 const Board = ({ board = presets.Beginner }) => {
 	let [{ gameState, cells, mines }, send] = React.useReducer(
 		reducer,
-		initialContext,
-		function getInitialContext(ctx) {
-			return {
-				...ctx,
-				cells: createCells(board),
-			};
-		}
+		initialState,
+		getinitialState()
 	);
 
 	let [timeElapsed, resetTimer] = useTimer(gameState);
@@ -373,6 +368,13 @@ const Board = ({ board = presets.Beginner }) => {
 			</WindowsWindow>
 		</div>
 	);
+
+	function getinitialState(): (arg: BoardState) => BoardState {
+		return (ctx) => ({
+			...ctx,
+			cells: createCells(board),
+		});
+	}
 };
 
 const GridCell = ({
@@ -554,11 +556,11 @@ function getRemainingMineCount(cells: Cell[], totalMines: number): number {
 	);
 }
 
-function getCellCount(board: BoardConfig): number {
+function getCellCount(board: Board): number {
 	return board.columns * board.rows;
 }
 
-function createCells(board: BoardConfig, mines?: number[]): Cell[] {
+function createCells(board: Board, mines?: number[]): Cell[] {
 	return Array(getCellCount(board))
 		.fill(null)
 		.map((_, index) => {
@@ -571,17 +573,17 @@ function createCells(board: BoardConfig, mines?: number[]): Cell[] {
 		});
 }
 
-function resetCells(board: BoardConfig): Cell[] {
+function resetCells(board: Board): Cell[] {
 	return createCells(board);
 }
 
-function initCells(board: BoardConfig, mines: number[]): Cell[] {
+function initCells(board: Board, mines: number[]): Cell[] {
 	return createCells(board, mines);
 }
 
 function addMinesToCells(
 	cells: Cell[],
-	board: BoardConfig,
+	board: Board,
 	mines: number[]
 ): Cell[] {
 	return Array(getCellCount(board))
@@ -617,7 +619,7 @@ function selectCell(
 	cellIndex: number,
 	cells: Cell[],
 	mines: number[],
-	board: BoardConfig,
+	board: Board,
 	startingState: GameState
 ): [GameState, Cell[]] {
 	let cellsCopy = [...cells];
@@ -633,7 +635,7 @@ function selectCell(
 
 	// This cell is a mine so BOOOOOOOOM
 	if (mines.includes(cellIndex)) {
-		// reveal all mines, then return new context because the game is over!
+		// reveal all mines, then return new state because the game is over!
 		for (let index of mines) {
 			cellsCopy[index] = new Cell(cell, {
 				status: index === cellIndex ? "exploded" : "revealed",
