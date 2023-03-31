@@ -24,7 +24,7 @@ interface BoardContext{
 
 
 interface BoardEvent{
-	type: string;
+	type: "RESET" | "REVEAL_CELL" | "REVEAL_ADJACENT_CELL_" | "MARK_CELL" | "MARK_REMAINING_MINES";
 	board?: BoardConfig;
 	index?: number;
 }
