@@ -22,12 +22,11 @@ interface BoardContext{
 	initialized: boolean;
 }
 
-
-interface BoardEvent{
-	type: "RESET" | "REVEAL_CELL" | "REVEAL_ADJACENT_CELL_" | "MARK_CELL" | "MARK_REMAINING_MINES";
-	board?: BoardConfig;
-	index?: number;
-}
+type BoardEvent = 
+{type: "RESET", board: BoardConfig} | 
+{type: "REVEAL_CELL", board: BoardConfig, index: number} | 
+{type: "MARK_CELL", board: BoardConfig, index: number} | 
+{type: "MARK_REMAINIING_MINES", board: BoardConfig}
 
 function reducer(context: BoardContext, event: BoardEvent): BoardContext {
 	if (event.type === "RESET") {
